@@ -14,6 +14,20 @@ function CreateFF(aFiles) {
   return ff;
 }
 
+function PrintFileSystem(aFileSystem) 
+{
+  let str = "";
+   for (let i = 0; i < aFileSystem.length; i++)
+   {
+     if (aFileSystem[i] == -1)
+      str += ".";
+     else
+      str += "#";
+   }
+
+   return str;
+}
+
 function FileSystemToString(aFileSystem) 
 {
   let str = "";
@@ -33,8 +47,6 @@ function Checksum(aFileSystem) {
   let j = aFileSystem.length - 1;
   for (;;)
   {
-    //console.log(jj.toString());
-
     if (i >= j)
       break;
 
@@ -51,19 +63,11 @@ function Checksum(aFileSystem) {
     i++;
   }
 
-  console.log(jj.toString());
-
-
   let total = 0;
   for (let i = 0; i < jj.length; i++) 
   {
     if (jj[i] == -1)
-    {
-      console.log(i);
       break;
-    }
-
-    //console.log(i + "*" +  parseInt(jj[i]) + " = " + (i * parseInt(jj[i])));
 
     total += i * jj[i];
   }
@@ -71,46 +75,42 @@ function Checksum(aFileSystem) {
   return total;
 }
 
-function Checksum2(aFileSystem) 
+function ComputeFreeSpace(aFileSystem) 
 {
-  let fileSystem = util.CopyObject(aFileSystem);
-  let i = 0;
-
-  let spaceMap = new Map();
-  let maxSize = 0;
-  for (;;)
+  let spaceMap = [];
+  let size = 0;
+  let statIndex = -1;
+  for (let i = 0; i < aFileSystem.length; i++)
   {
-    if (i == fileSystem.length)
-      break;
+    if (aFileSystem[i] != -1) {
 
-    if (fileSystem[i] != -1) 
-    {
-      i++
+      if (size > 0)
+      {
+        spaceMap.push({ index: statIndex, size: size });
+        
+        statIndex = -1;
+        size = 0;
+      }
+
       continue;
     }
 
-    let size = 0;
-    let statIndex = i;
-    while (fileSystem[i] == -1)
-    {
-      size++;
-      i++;
-    }
-
-    if (size > 0)
-    {
-      let kk = spaceMap.has(size) ? spaceMap.get(size) : [];
-
-      kk.push({ index: statIndex });
-
-      maxSize = Math.max(maxSize, size);
-      spaceMap.set(size, kk);      
-    }
+    if (statIndex == -1)
+      statIndex = i;
+    
+    size++;
   }
 
-  console.log(spaceMap);
+  return spaceMap;
+}
 
-  i = fileSystem.length - 1;
+function Checksum2(aFileSystem) 
+{
+  let fileSystem = util.CopyObject(aFileSystem);
+
+  let spaceMap = ComputeFreeSpace(aFileSystem);
+
+  i = aFileSystem.length - 1;
   for (;;)
   {
     if (i < 0)
@@ -118,7 +118,7 @@ function Checksum2(aFileSystem)
 
     if (aFileSystem[i] == -1) 
     {
-      i--
+      i--;
       continue;
     }
 
@@ -132,65 +132,34 @@ function Checksum2(aFileSystem)
       i--;
     }
 
-    //if (chunk.length > 0 && i > 0)
-    //  i++;
-
     if (chunk.length > 0)
     {
-      let sizeFound = chunk.length;
       let found = false;
-      while (1) 
+      let copyIndex = 0;
+      for (let h = 0; h < spaceMap.length; h++) 
       {
-        if (spaceMap.has(sizeFound)) {
-          found = true;    
+        if (spaceMap[h].size >= chunk.length) {
+          found = true;
+          copyIndex = spaceMap[h].index;
           break;
-        }
-        else 
-          sizeFound++;
-
-        if (sizeFound > maxSize)
-          break;
+        }      
       }
 
       if (found)
       {
-        for (let x= 0; x < chunk.length; x++)
-          fileSystem[startIndex - x] = -1;   
-
-        let mem = spaceMap.get(sizeFound);
+        if (copyIndex < startIndex) {
         
-        let copyIndex = mem[0].index;
+        for (let x = 0; x < chunk.length; x++)
+          fileSystem[startIndex - x] = -1;   
 
         for (let k = 0, j = copyIndex; k < chunk.length; k++, j++)
           fileSystem[j] = chunk[k];
 
-        mem.splice(0, 1);
-
-        if (mem.length == 0)
-          spaceMap.delete(sizeFound);
-
-        let newSize = sizeFound - chunk.length;
-        if (newSize > 0)
-        {
-          let yy = spaceMap.has(newSize) ? spaceMap.get(newSize) : [];
-          yy.push({index: copyIndex + chunk.length});
-          
-          yy.sort((a, b)=>{
-            return (a.index - b.index);
-          });
-
-          spaceMap.set(newSize, yy);
+        spaceMap = ComputeFreeSpace(fileSystem);
         }
-
-        for (let [key, value] of spaceMap)
-          maxSize = Math.max(maxSize, key);
       }
     }
   }
-
-  //console.log(spaceMap);
-
-  //console.log(FileSystemToString(fileSystem));
 
   let total = 0;
   for (let i = 0; i < fileSystem.length; i++) 
@@ -198,26 +167,20 @@ function Checksum2(aFileSystem)
     if (fileSystem[i] == -1)
       continue;
 
-    //console.log(i + "*" +  parseInt(jj[i]) + " = " + (i * parseInt(jj[i])));
-
     total += i * fileSystem[i];
   }
 
-  console.log(total);
+  return total;
 }
 
-let files = util.MapInput("./Day9TestInput.txt", (aElem) => {
+let files = util.MapInput("./Day9Input.txt", (aElem) => {
 
   return parseInt(aElem);
 
 }, "");
 
-console.log(files);
-
 let gg = CreateFF(files);
-
-console.log(gg);
 
 console.log(Checksum(gg));
 
-Checksum2(gg);
+console.log(Checksum2(gg));
