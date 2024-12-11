@@ -1,7 +1,37 @@
 const util = require('./Util.js');
 const matrix = require('./Matrix.js');
 
-function ComputeFreqAntidotes(aFreq1, aFreq2, aMap, aAntidoteMap) {
+function IsInMap(aX, aY, aMap) 
+{ 
+  if (aX >= 0 && aX < aMap[0].length && aY >= 0 && aY < aMap.length)
+    return true;
+ 
+  return false;
+}
+
+function AddNewAntinode(aX, aY, aAntinodeMap) 
+{
+  let key = aX + "_" + aY;
+  aAntinodeMap.set(key, 1);
+}
+
+function CreateExtraAntinodes(aX, aY, aDx, aDy, aMap, aAntinodeMap) 
+{
+  let x = aX;
+  let y = aY;
+  while (1) {
+    let x3 = x + aDx;
+    let y3 = y + aDy;
+    if (IsInMap(x3, y3, aMap))
+      AddNewAntinode(x3, y3, aAntinodeMap);
+     else
+       break;
+    x = x3;
+    y = y3;
+   }
+}
+
+function ComputeFreqAntinodes(aFreq1, aFreq2, aMap, aAntinodeMap, aPart2) {
    let dx = Math.abs(aFreq2.x - aFreq1.x);
    let dy = Math.abs(aFreq2.y - aFreq1.y);
    
@@ -17,37 +47,55 @@ function ComputeFreqAntidotes(aFreq1, aFreq2, aMap, aAntidoteMap) {
    let x1 = maxX + dx;
    let y1 = aFreq1.x > aFreq2.x ? minY - dy : maxY + dy;
 
-   if (x0 >= 0 && x0 < aMap[0].length && y0 >= 0 && y0 < aMap.length)
+   if (IsInMap(x0, y0, aMap))
    {
-     let key = x0 + "_" + y0;
+     AddNewAntinode(x0, y0, aAntinodeMap);
 
-     console.log(key);
+     if (aPart2) {
+       let edx = -dx;
+       let edy = aFreq1.x > aFreq2.x ? dy : -dy;
 
-     aAntidoteMap.set(key, 1);
+       CreateExtraAntinodes(x0, y0, edx, edy, aMap, aAntinodeMap);
+     }
    }
 
-   if (x1 >= 0 && x1 < aMap[0].length && y1 >= 0 && y1 < aMap.length)
+   if (IsInMap(x1, y1, aMap))
    {
-      let key = x1 + "_" + y1;
-      aAntidoteMap.set(key, 1);
+     AddNewAntinode(x1, y1, aAntinodeMap);
 
-      console.log(key);
+     if (aPart2) {
+       let edx = dx;
+       let edy = aFreq1.x > aFreq2.x ? -dy : dy;
+
+       CreateExtraAntinodes(x1, y1, edx, edy, aMap, aAntinodeMap);
+     }
    }
 }
 
-function ComputeAntidotes(aFreqMap, aMap) {
+function ComputeAntinodes(aFreqMap, aMap, aPart2) {
 
-  let antidoteMap = new Map();
+  let antinodeMap = new Map();
+
+  if (aPart2) 
+  {
+    for (let i = 0; i < aMap.length; i++)
+      for (let j = 0; j < aMap[i].length; j++) 
+      {
+        if (aMap[i][j] != ".")
+          antinodeMap.set(j + "_" + i, 1);
+      }
+  }
+
   for (let [key, value] of aFreqMap)
   {
     for (let i = 0; i < value.length; i++)
       for (let j = i + 1; j < value.length; j++)
-        ComputeFreqAntidotes(value[i], value[j], aMap, antidoteMap);         
+        ComputeFreqAntinodes(value[i], value[j], aMap, antinodeMap, aPart2);         
   }
 
-  let mm = util.CopyObject(aMap);
+  /*let mm = util.CopyObject(aMap);
 
-  for (let [key, value] of antidoteMap)
+  for (let [key, value] of antinodeMap)
   {
     let pp = key.split("_");
 
@@ -57,9 +105,9 @@ function ComputeAntidotes(aFreqMap, aMap) {
     mm[y][x] = "#";
   }
 
-  matrix.CreateMatrix(mm).Print("");
+  matrix.CreateMatrix(mm).Print("");*/
 
-  return antidoteMap.size;
+  return antinodeMap.size;
 }
 
 let freqMap = new Map();
@@ -84,8 +132,6 @@ let map = util.MapInput("./Day8Input.txt", (aElem, aY) => {
 
 }, "\r\n");
 
-console.log(map);
+console.log(ComputeAntinodes(freqMap, map, false));
 
-console.log(freqMap);
-
-console.log(ComputeAntidotes(freqMap, map));
+console.log(ComputeAntinodes(freqMap, map, true));
