@@ -156,6 +156,7 @@ class Matrix {
       if (ss.length > 0)
         ss += " ";
       ss += PrintLine(this.mMatix[i], aSeparator, aFilterFunc);
+      ss += "\r\n";
     }
 
     return ss;
