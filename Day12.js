@@ -265,6 +265,21 @@ function IsValidHorGroup(aMap, aGroup, aKey, aRet)
   return IsValidGroup(leftMap, rightMap, aKey, aRet);
 }
 
+function AddPerimeterToMap(aMap, aPerimeter) 
+{
+  for (let i = 0; i < aPerimeter.length; i++)
+  {
+    for (let j = 0; j < aPerimeter[i].length; j++)
+    {
+      let x = aPerimeter[i][j].x;
+      let y = aPerimeter[i][j].y;
+
+      if (IsInMap(x, y, aMap))
+        aMap[y][x] = "#";
+    }
+  }
+}
+
 function ComputePerimeter2(aMap, key, aPerimeterPoints) 
 {
   let perimeter = [];
@@ -303,6 +318,9 @@ function ComputePerimeter2(aMap, key, aPerimeterPoints)
     if (perimeter[i].length > 1)
       pp += perimeter[i].length - 1;
 
+  if (key == "M")
+    AddPerimeterToMap(aMap, perimeter);
+
   return pp;
 }
 
@@ -335,7 +353,7 @@ function ComputeRegionPrice(aMap, aRegion)
 
 let regionMap = new Map();
 
-let map = util.MapInput("./Day12Input.txt", (aElem, aY) => {
+let map = util.MapInput("./Day12TestInput3.txt", (aElem, aY) => {
 
   return aElem.split("").map((tt, aX)=>{
 
@@ -350,9 +368,9 @@ let map = util.MapInput("./Day12Input.txt", (aElem, aY) => {
 
 }, "\r\n");
 
-matrix.CreateMatrix(map).Print("", (aElem) => { return aElem != 'A' ? "." : aElem; });
-
 console.log(ComputeSubRegions(map, regionMap));
+
+matrix.CreateMatrix(map).Print("", (aElem) => { return aElem != 'M' ? "." : aElem; });
 
 //console.log(regionMap);
 
