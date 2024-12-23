@@ -58,9 +58,9 @@ function ComputeNthSecret(aSecret, aCount)
 
     if (jj.has(key)) 
     {
-      let cc = jj.get(key);
+      //let cc = jj.get(key);
 
-      jj.set(key, Math.max(cc, bb[i + 3]));
+      //jj.set(key, Math.max(cc, bb[i + 3]));
     } 
     else 
       jj.set(key, bb[i + 3]);
@@ -77,8 +77,6 @@ function CountNth(aNumbers)
   let yy = new Map();
   for (let i = 0; i < aNumbers.length; i++)
   { 
-    console.log(i + "/" + aNumbers.length);
-    
     let ret = ComputeNthSecret(BigInt(aNumbers[i]), 2000);
     
     total += ret.s;
@@ -98,15 +96,9 @@ function CountNth(aNumbers)
     }
   }
 
-  console.log(yy);
-
   let max = 0;
   for (let [key, value] of yy) 
   {
-
-    if (value.length != aNumbers.length)
-      continue;
-
       let total = 0;
       for (let i = 0; i < value.length; i++)
         total += value[i];
@@ -120,9 +112,5 @@ function CountNth(aNumbers)
 let numbers = util.MapInput("./Day22Input.txt", (aElem) => {
     return parseInt(aElem);
  }, "\r\n");
-
- console.log(numbers);
-
- //ComputeNthSecret(123, 2000);
 
  console.log(CountNth(numbers));
