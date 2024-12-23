@@ -33,19 +33,19 @@ function ComputeNextSecret(aSecret)
 function ComputeNthSecret(aSecret, aCount) 
 {
   let secret = BigInt(aSecret);
-  let prev = BigInt(aSecret) % 10n;
+  let prev = Number(BigInt(aSecret) % 10n);
   let bb = [];
   let gg = [];
   for (let i = 0; i < aCount; i++) {
     secret = ComputeNextSecret(secret);
-    let hh = BigInt(secret) % 10n;
+    let hh = Number(BigInt(secret) % 10n);
     bb.push(hh);
     gg.push(hh - prev);
-    prev = BigInt(secret) % 10n;
+    prev = hh;
   }
 
   let jj = new Map();
-  for (let i = 1; i < gg.length - 4; i++)
+  for (let i = 0; i <= gg.length - 4; i++)
   {
     let key = "";
     for (let j = i; j < i + 4; j++) {
@@ -54,31 +54,67 @@ function ComputeNthSecret(aSecret, aCount)
       key += gg[j];
     }
 
+    //console.log(key + " " + i);
+
     if (jj.has(key)) 
     {
       let cc = jj.get(key);
 
-      cc.push(bb[i + 3]);
+      jj.set(key, Math.max(cc, bb[i + 3]));
     } 
     else 
-      jj.set(key, [bb[i + 3]]);
+      jj.set(key, bb[i + 3]);
   }
 
-  console.log(jj);
+  //console.log(jj);
 
-  return secret;
+  return { s: secret, m: jj};
 }
 
 function CountNth(aNumbers) 
 {
   let total = 0n;
+  let yy = new Map();
   for (let i = 0; i < aNumbers.length; i++)
   { 
-    console.log(i + "/" + aNumbers.length); 
-    total += ComputeNthSecret(BigInt(aNumbers[i]), 2000);
+    console.log(i + "/" + aNumbers.length);
+    
+    let ret = ComputeNthSecret(BigInt(aNumbers[i]), 2000);
+    
+    total += ret.s;
+
+    for (let [key, value] of ret.m)
+    {
+      if (yy.has(key))
+      {
+        let cc = yy.get(key);
+
+        cc.push(value);
+
+        yy.set(key, cc);
+      }
+      else
+        yy.set(key, [value]);
+    }
   }
- 
-  return total;
+
+  console.log(yy);
+
+  let max = 0;
+  for (let [key, value] of yy) 
+  {
+
+    if (value.length != aNumbers.length)
+      continue;
+
+      let total = 0;
+      for (let i = 0; i < value.length; i++)
+        total += value[i];
+
+      max = Math.max(max, total);
+  }
+
+  return [total, max];
 }
 
 let numbers = util.MapInput("./Day22Input.txt", (aElem) => {
@@ -87,4 +123,6 @@ let numbers = util.MapInput("./Day22Input.txt", (aElem) => {
 
  console.log(numbers);
 
- ComputeNthSecret(123, 2000);
+ //ComputeNthSecret(123, 2000);
+
+ console.log(CountNth(numbers));
