@@ -65,6 +65,7 @@ function FindSubRegion(aStart, aRegion, aMap)
 function ComputeSubRegions(aMap, aRegionMap) 
 {
   let total = 0;
+  let total2 = 0;
   for (let [key, value] of aRegionMap)
   {
     let ff = util.CopyObject(value);
@@ -81,14 +82,17 @@ function ComputeSubRegions(aMap, aRegionMap)
     //console.log(key + " \n");
     //console.log(subRegions);
 
-    for (let i = 0; i < subRegions.length; i++)
-      total += ComputeRegionPrice(aMap, subRegions[i]);
+    for (let i = 0; i < subRegions.length; i++) {
+      let [r1, r2] = ComputeRegionPrice(aMap, subRegions[i]);
+      total += r1;
+      total2 += r2;
+    }
   }
 
-  return total;
+  return [total, total2];
 }
 
-function ComputeHorLineGroup(aPoint, aPerimeterPoints) 
+function ComputeHorLineGroup(aPoint, aPerimeterPoints, aMap, aRegion, aTestL, aTestR) 
 {
   let lineGroup = [aPoint];
 
@@ -107,9 +111,16 @@ function ComputeHorLineGroup(aPoint, aPerimeterPoints)
         })
 
         if (ret == undefined) {
-          found = true;
           lineGroup.push(aPerimeterPoints[j]);
-          break;
+          if (!IsValidHorGroup(aMap, aRegion, lineGroup, false, aTestL, aTestR)) {
+           
+            lineGroup.splice(-1, 1);
+            //break;
+          }
+          else {
+            found = true;
+            break;
+          }
         }
       }
     }
@@ -121,10 +132,17 @@ function ComputeHorLineGroup(aPoint, aPerimeterPoints)
     break;
  }
 
+ lineGroup.sort((a, b)=>{ 
+  if (a.x == b.x) 
+    return a.y - b.y;
+  else
+    return a.x - b.x;                        
+  });
+
  return lineGroup;
 }
 
-function ComputeVertLineGroup(aPoint, aPerimeterPoints) 
+function ComputeVertLineGroup(aPoint, aPerimeterPoints, aMap, aRegion, aTestL, aTestR) 
 {
   let lineGroup = [aPoint];
 
@@ -143,9 +161,16 @@ function ComputeVertLineGroup(aPoint, aPerimeterPoints)
         })
 
         if (ret == undefined) {
-          found = true;
           lineGroup.push(aPerimeterPoints[j]);
-          break;
+          if (!IsValidVertGroup(aMap, aRegion, lineGroup, false, aTestL, aTestR)) {
+            lineGroup.splice(-1, 1);
+            //break;
+          }
+          else {
+            found = true;
+            break;
+          } 
+          
         }
       }
     }
@@ -156,6 +181,13 @@ function ComputeVertLineGroup(aPoint, aPerimeterPoints)
   if (!found)
     break;
  }
+
+ lineGroup.sort((a, b)=>{ 
+  if (a.x == b.x) 
+    return a.y - b.y;
+  else
+    return a.x - b.x;                        
+  });
 
  return lineGroup;
 }
@@ -178,16 +210,17 @@ function GroupsAreEqual(aGroup1, aGroup2)
 
 function HasGroup(aGroup, aGroups) 
 {
+  let count = 0;
   for (let i = 0; i < aGroups.length; i++)
   {
     if (GroupsAreEqual(aGroup, aGroups[i]))
-      return true;
+      count++;
   }
 
-  return false;
+  return count;
 }
 
-function IsValidGroup(aLeftMap, aRightMap, aKey, aRet)
+function IsValidGroup(aLeftMap, aRightMap, aKey, aTestLR, aTestL, aTestR)
 {
   if (aLeftMap.size > 1 && aRightMap.size > 1)
     return false;
@@ -208,16 +241,14 @@ function IsValidGroup(aLeftMap, aRightMap, aKey, aRet)
           isValidRight = true;
     }
 
-  if (isValidLeft && isValidRight)
-    aRet.countDouble = true;
+  return aTestLR ? isValidLeft && isValidRight : 
+                   aTestL ? isValidLeft : 
+                   aTestR ? isValidRight : 
+                   isValidLeft || isValidRight;
 
-  if (isValidLeft || isValidRight)
-    return true;
-
-  return false;
 }
 
-function IsValidVertGroup(aMap, aGroup, aKey, aRet) 
+function IsValidVertGroup(aMap, aRegion, aGroup, aTestLR, aTestL, aTestR) 
 {
   let leftMap = new Map();
   let rightMap = new Map();
@@ -230,18 +261,27 @@ function IsValidVertGroup(aMap, aGroup, aKey, aRet)
     if (x0 < 0 || x0 >= aMap[0].length || y < 0 || y >= aMap.length)
       leftMap.set(".", 1);
     else
-      leftMap.set(aMap[y][x0], 1);
+      leftMap.set(GetRegionKey(x0, y, aRegion), 1);
 
     if (x1 < 0 || x1 >= aMap[0].length || y < 0 || y >= aMap.length)
       rightMap.set(".", 1);
     else
-      rightMap.set(aMap[y][x1], 1);
+      rightMap.set(GetRegionKey(x1, y, aRegion), 1);
   }
 
-  return IsValidGroup(leftMap, rightMap, aKey, aRet);
+  return IsValidGroup(leftMap, rightMap, 'R', aTestLR, aTestL, aTestR);
 }
 
-function IsValidHorGroup(aMap, aGroup, aKey, aRet) 
+function GetRegionKey(aX, aY, aRegion) 
+{
+  let pt = aRegion.find((aElem)=>{ return aElem.x == aX && aElem.y == aY;});
+
+  if (pt != undefined)
+    return 'R';
+  return '*';
+}
+
+function IsValidHorGroup(aMap, aRegion, aGroup, aTestLR, aTestL, aTestR) 
 {
   let leftMap = new Map();
   let rightMap = new Map();
@@ -254,15 +294,15 @@ function IsValidHorGroup(aMap, aGroup, aKey, aRet)
     if (x < 0 || x >= aMap[0].length || y0 < 0 || y0 >= aMap.length)
       leftMap.set(".", 1);
     else
-      leftMap.set(aMap[y0][x], 1);
+      leftMap.set(GetRegionKey(x, y0, aRegion), 1);
 
     if (x < 0 || x >= aMap[0].length || y1 < 0 || y1 >= aMap.length)
       rightMap.set(".", 1);
     else
-      rightMap.set(aMap[y1][x], 1);
+      rightMap.set(GetRegionKey(x, y1, aRegion), 1);
   }
 
-  return IsValidGroup(leftMap, rightMap, aKey, aRet);
+  return IsValidGroup(leftMap, rightMap, 'R', aTestLR, aTestL, aTestR);
 }
 
 function AddPerimeterToMap(aMap, aPerimeter) 
@@ -274,37 +314,159 @@ function AddPerimeterToMap(aMap, aPerimeter)
       let x = aPerimeter[i][j].x;
       let y = aPerimeter[i][j].y;
 
-      if (IsInMap(x, y, aMap))
-        aMap[y][x] = "#";
+      if (IsInMap(x, y, aMap)) {
+        let rr = GetDigit(aMap[y][x]) + 1;
+        aMap[y][x] = rr.toString();
+      }
     }
   }
 }
 
-function ComputePerimeter2(aMap, key, aPerimeterPoints) 
+function RemovePoints(aGroup, aPoints) 
 {
-  let perimeter = [];
-  for (let i = 0; i < aPerimeterPoints.length; i++)
+  for (let i = 0; i < aGroup.length; i++)
   {
-    let first = aPerimeterPoints[i];
-    let horGroup = ComputeHorLineGroup(first, aPerimeterPoints);
-    let vertGroup = ComputeVertLineGroup(first, aPerimeterPoints);
+     let index = aPoints.findIndex((aElem)=>{ return aGroup[i].x == aElem.x && aGroup[i].y == aElem.y;});
+     if (index != -1)
+       aPoints.splice(index, 1);
+  }
+}
 
-    let vertRet = {countDouble : false };
-    if (vertGroup.length > 1 && !HasGroup(vertGroup, perimeter) && IsValidVertGroup(aMap, vertGroup, key, vertRet)) {
+function IsDigit(aSymbol) 
+{
+   return aSymbol >= '0' && aSymbol <= "9";
+}
 
-      if (vertRet.countDouble)
-        perimeter.push(vertGroup);  
-      perimeter.push(vertGroup);
+function GetDigit(aSymbol) 
+{
+  if (IsDigit(aSymbol))
+    return parseInt(aSymbol);
+  return 0;
+}
+
+function PrintMap(aMap, aKey, aGroups, aPoints) {
+  let map2 = util.CopyObject(aMap);
+
+   AddPerimeterToMap(map2, aGroups);
+
+   for (let j = 0; j < aPoints.length; j++)
+    {
+      let x = aPoints[j].x;
+      let y = aPoints[j].y;
+
+      if (IsInMap(x, y, map2)) {
+
+        let tt = GetDigit(map2[y][x]) + 1;
+
+        map2[y][x] = tt.toString();
+      }
     }
 
-    let horRet = {countDouble : false };
-    if (horGroup.length > 1 && !HasGroup(horGroup, perimeter) && IsValidHorGroup(aMap, horGroup, key, horRet)) {
+   matrix.CreateMatrix(map2).Print("", (aElem) => { return (aElem != aKey && !IsDigit(aElem)) ? "." : aElem; });
+}
 
-      if (horRet.countDouble)
+function ComputeGroupKey(aGroup, aId) 
+{
+  let key = "";
+  for (let i = 0; i < aGroup.length; i++)
+  {
+    if (key.length > 0)
+      key += "_";
+
+    key += aGroup[i].x;
+    key += "_";
+    key += aGroup[i].y;
+  }
+
+  key += "_";
+  key += aId;
+
+  return key;
+}
+
+function ComputePerimeter2(aMap, aRegion, aKey, aPerimeterPoints) 
+{
+  let uu = new Map();
+
+  let perimeter = [];
+  for (;;)
+  {
+    let foundGroup = false;
+    for (let i = 0; i < aPerimeterPoints.length; i++) {
+      let first = aPerimeterPoints[i];
+
+      let horGroupL = ComputeHorLineGroup(first, aPerimeterPoints, aMap, aRegion, true, false);
+      let horGroupR = ComputeHorLineGroup(first, aPerimeterPoints, aMap, aRegion, false, true);
+      let vertGroupL = ComputeVertLineGroup(first, aPerimeterPoints, aMap, aRegion, true, false);
+      let vertGroupR = ComputeVertLineGroup(first, aPerimeterPoints, aMap, aRegion, false, true);
+
+      let groups = [];
+
+      let key1 = ComputeGroupKey(horGroupL, -1);
+      let key2 = ComputeGroupKey(horGroupR, 1);
+      let key3 = ComputeGroupKey(vertGroupL, -1);
+      let key4 = ComputeGroupKey(vertGroupR, 1);
+
+      if (horGroupL.length > 1 && !uu.has(key1))
+      {
+        groups.push(horGroupL);
+        uu.set(key1, 1);
+      }
+
+      if (horGroupR.length > 1 && !uu.has(key2))
+        {
+          groups.push(horGroupR);
+          uu.set(key2, 1);
+        }
+
+        if (vertGroupL.length > 1 && !uu.has(key3))
+          {
+            groups.push(vertGroupL);
+            uu.set(key3, 1);
+          }
+
+          if (vertGroupR.length > 1 && !uu.has(key4))
+            {
+              groups.push(vertGroupR);
+              uu.set(key4, 1);
+            }
+
+      for (let j = 0; j < groups.length; j++) 
+          {
+            RemovePoints(groups[j], aPerimeterPoints);
+            perimeter.push(groups[j]);
+            foundGroup = true;
+          }
+
+    /*if (vertGroup.length > 1) {
+
+      let cc = HasGroup(vertGroup, perimeter);
+      if (cc == 0 || (cc == 1 && IsValidVertGroup(aMap, aRegion, vertGroup, true, false, false)))
+      {
+        RemovePoints(vertGroup, aPerimeterPoints);
+        perimeter.push(vertGroup);
+        foundGroup = true;
+      }
+    }
+
+    if (horGroup.length > 1) {
+
+      let cc = HasGroup(horGroup, perimeter);
+      if (cc == 0 || (cc == 1 && IsValidHorGroup(aMap, aRegion, horGroup, true, false, false)))
+      {
+        RemovePoints(horGroup, aPerimeterPoints);
         perimeter.push(horGroup);
-
-      perimeter.push(horGroup);
+        foundGroup = true;
+      }
     }
+    */
+
+    if (foundGroup)
+      break;
+  }
+
+    if (!foundGroup)
+      break;
 
     /*let ss = [first];
 
@@ -318,10 +480,13 @@ function ComputePerimeter2(aMap, key, aPerimeterPoints)
     if (perimeter[i].length > 1)
       pp += perimeter[i].length - 1;
 
-  if (key == "M")
-    AddPerimeterToMap(aMap, perimeter);
+  //if (aKey == 'W') {
+  //  PrintMap(aMap, aKey, perimeter, aPerimeterPoints);
 
-  return pp;
+  //console.log(perimeter, aPerimeterPoints);
+  //}
+
+  return perimeter.length + aPerimeterPoints.length;
 }
 
 function ComputeRegionPrice(aMap, aRegion) 
@@ -344,16 +509,28 @@ function ComputeRegionPrice(aMap, aRegion)
       }
     }
     
-  let perimeter2 = ComputePerimeter2(aMap, key, perimeterPoints);
+  //let perimeter3 = ComputePerimeter3(perimeterPoints);
+  let perimeter2 = ComputePerimeter2(aMap, aRegion, key, perimeterPoints);
 
-  console.log(key + " => " + aRegion.length + " " + perimeter + " " + (perimeter - perimeter2));
+  //if (key == 'W')
+  //  console.log(key + " => " + aRegion.length + " " + perimeter + " " + perimeter2);
 
-  return aRegion.length * (perimeter - perimeter2);
+  let gg = hh.get(key);
+  if (gg == undefined)
+    gg = [perimeter2];
+  else
+    gg.push(perimeter2);
+
+  hh.set(key, gg);
+
+  return [aRegion.length * perimeter ,aRegion.length * perimeter2];
 }
+
+let hh = new Map();
 
 let regionMap = new Map();
 
-let map = util.MapInput("./Day12TestInput3.txt", (aElem, aY) => {
+let map = util.MapInput("./Day12Input.txt", (aElem, aY) => {
 
   return aElem.split("").map((tt, aX)=>{
 
@@ -370,7 +547,9 @@ let map = util.MapInput("./Day12TestInput3.txt", (aElem, aY) => {
 
 console.log(ComputeSubRegions(map, regionMap));
 
-matrix.CreateMatrix(map).Print("", (aElem) => { return aElem != 'M' ? "." : aElem; });
+//console.log(hh);
+
+//matrix.CreateMatrix(map).Print("", (aElem) => { return (aElem != 'G' && aElem != ' ') ? "." : aElem; });
 
 //console.log(regionMap);
 
