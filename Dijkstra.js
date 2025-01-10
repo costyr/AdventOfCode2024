@@ -209,16 +209,40 @@ class Dijkstra {
 
       if (next == startNodeStateId)
         break;
-      next = aPath[next];
 
-      if (next === undefined)
+      let ff = aPath.get(next);
+
+      if (ff === undefined)
         return [];
+
+      next = ff[0];
     }
 
     return goodPath;
   }
 
-  FindShortestPath(aStart, aEnd) {
+  ComputeAllPaths(aNext, aEnd, aPathMap, aPath, aAllPaths) 
+  {
+    if (aNext == aEnd)
+    {
+      aAllPaths.push(aPath);
+      return;
+    }
+
+    let ff = aPathMap.get(aNext);
+    
+    if (ff == undefined)
+      return;
+
+    for (let i = 0; i < ff.length; i++)
+    {
+      let newPath = [...aPath];
+      newPath.unshift(ff[i]);
+      this.ComputeAllPaths(ff[i], aEnd, aPathMap, newPath, aAllPaths);
+    }
+  }
+
+  FindShortestPath(aStart, aEnd, aAllPaths) {
     let queue = new PriorityQueue();
     this.InitQueue(queue, aStart);
 
@@ -230,7 +254,7 @@ class Dijkstra {
     else
       queue.SetSortFunc(SortByDist.bind(null, state));
 
-    let path = [];
+    let path = new Map();
     let endReached = false;
     while (!queue.IsEmpty()) {
 
@@ -261,8 +285,12 @@ class Dijkstra {
             continue;
 
           let estimateDist = currentDist + neighbour.cost;
-          if (estimateDist < state.GetDist(neighbourStateId)) {
-            path[neighbourStateId] = currentNodeStateId;
+          if (estimateDist <= state.GetDist(neighbourStateId)) {
+            let ff = path.get(neighbourStateId);
+            if (ff == undefined)
+              path.set(neighbourStateId, [currentNodeStateId]);
+            else
+              ff.push(currentNodeStateId);
             state.SetDist(neighbourStateId, estimateDist);
           }
 
@@ -277,10 +305,24 @@ class Dijkstra {
     if (!endReached)
       return { dist: 0, path: [] };
 
-    let goodPath = this.ComputePath(aStart, aEnd, path);
-
     let endNodeStateId = this.ComputeStateId(aEnd);
-    return { dist: state.GetDist(endNodeStateId), path: goodPath };
+    let dist = state.GetDist(endNodeStateId);
+
+    if (aAllPaths != undefined && aAllPaths)
+    {
+      let start = this.ComputeStateId(aStart);
+      let next = this.ComputeStateId(aEnd);
+      let allPaths = [];
+      this.ComputeAllPaths(next, start, path, [next], allPaths);
+
+      return { dist: dist, path: allPaths };
+    }
+    else 
+    {
+      let goodPath = this.ComputePath(aStart, aEnd, path);
+
+      return { dist: dist, path: goodPath };
+    }
   }
 }
 
