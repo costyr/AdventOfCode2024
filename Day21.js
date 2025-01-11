@@ -2,12 +2,60 @@ const util = require('./Util.js');
 const alg = require('./Dijkstra.js');
 
 let kNumericKeypad = [['7', '8', '9'],
-['4', '5', '6'],
-['1', '2', '3'],
-[' ', '0', 'A']];
+                      ['4', '5', '6'],
+                      ['1', '2', '3'],
+                      [' ', '0', 'A']];
 
 let kDirectionalKeypad = [[' ', '^', 'A'],
-['<', 'v', '>']];
+                          ['<', 'v', '>']];
+
+function ToHashMap(aMap) {
+  let hashMap = new Map(); 
+  for (let i = 0; i < aMap.length; i++)
+    for (let j = 0; j < aMap[i].length; j++)
+      hashMap.set(aMap[i][j], [j, i]);
+  return hashMap;
+}
+
+let kDirectionalKeypadMap = ToHashMap(kDirectionalKeypad);
+
+function ComputePathLength(aHashMap, aPath) {
+  let bb = 0;
+  for (let i = 0; i < aPath.length - 1; i++)
+  {
+    let p1 = aHashMap.get(aPath[i]);
+    let p2 = aHashMap.get(aPath[i + 1]);
+    
+    let dist = Math.abs(p1[0] - p2[0]) + Math.abs(p1[1] - p2[1]);
+
+    bb += dist;
+  }
+
+  return bb;
+}
+
+function ComputeBestPath(aHashMap, aCodePaths, aStrict) {
+
+  let min = Number.MAX_SAFE_INTEGER;
+  let tt = [];
+  for (let i = 0; i < aCodePaths.length; i++)
+  {
+    let dist = ComputePathLength(aHashMap, aCodePaths[i]);
+
+    let ff = aStrict ? dist < min : dist <= min;
+    if (ff) 
+    {
+      min = dist;
+
+      if (aStrict)
+        tt = [];
+
+      tt.push(aCodePaths[i]);
+    }
+  }
+
+  return tt;
+}
 
 function GetNodeCoord(aMap, aNodeId) {
   for (let i = 0; i < aMap.length; i++)
@@ -159,8 +207,12 @@ function ComputeAllCodePaths(aMap, aCode, aIndex, aPath, aAllPaths, aCache) {
       return;
     }
     else {
-      aPath.push(...yy[0]);
+      if (yy.length > 0 && yy[0].length > 0)
+        aPath.push(...yy[0]);
       aPath.push('A');
+
+      if (aPath.length > 102944839)
+        console.log(aPath.length);
     }
   }
 
@@ -189,21 +241,56 @@ function ToArray(aDirs)
 function ComputeTotalComplexity(aCodes, aCount) {
   let total = 0;
   let cache = new Map();
+
+  cache.set("^_^", [[]]);
+  cache.set("^_v", [['v']]);
+  cache.set("^_<", [['v', '<']]);
+  cache.set("^_>", [['v', '>']]);
+  cache.set("^_A", [['>']]);
+
+  cache.set("v_^", [['^']]);
+  cache.set("v_v", [[]]);
+  cache.set("v_<", [['<']]);
+  cache.set("v_>", [['>']]);
+  cache.set("v_A", [['^', '>']]);
+
+  cache.set("<_^", [['>', '^']]);
+  cache.set("<_v", [['>']]);
+  cache.set("<_<", [[]]);
+  cache.set("<_>", [['>', '>']]);
+  cache.set("<_A", [['>', '>', '^']]);
+
+  cache.set(">_^", [['<', '^']]);
+  cache.set(">_v", [['<']]);
+  cache.set(">_<", [['<', '<']]);
+  cache.set(">_>", [[]]);
+  cache.set(">_A", [['^', 'A']]);
+
+  cache.set("A_^", [['<']]);
+  cache.set("A_v", [['<', 'v']]);
+  cache.set("A_<", [['v', '<', '<']]);
+  cache.set("A_>", [['v']]);
+  cache.set("A_A", [[]]);
+
   for (let i = 0; i < aCodes.length; i++) {
     let gg = [];
     ComputeAllCodePaths(kNumericKeypad, aCodes[i], 1, [], gg, cache);
 
-    let uu = [];
+    let gg0 = ComputeBestPath(kDirectionalKeypadMap, gg, false);
+
     for (let k = 0; k < aCount; k++) {
       //console.log(k + " " + gg.length);
-    for (let i = 0; i < gg.length; i++)
-      ComputeAllCodePaths(kDirectionalKeypad, gg[i], 1, [], uu, cache);
-    gg = uu;
+    let uu = [];
+    for (let i = 0; i < gg0.length; i++)
+      ComputeAllCodePaths(kDirectionalKeypad, gg0[i], 1, [], uu, cache);
+    gg0 = ComputeBestPath(kDirectionalKeypadMap, uu, true);
+
+    console.log(gg0[0].length);
   }
 
     let kk = [];
-    for (let i = 0; i < uu.length; i++)
-      ComputeAllCodePaths(kDirectionalKeypad, uu[i], 1, [], kk, cache);
+    for (let i = 0; i < gg0.length; i++)
+      ComputeAllCodePaths(kDirectionalKeypad, gg0[i], 1, [], kk, cache);
 
     let min = Number.MAX_SAFE_INTEGER;
     for (let i = 0; i < kk.length; i++)
@@ -228,25 +315,30 @@ console.log(codes);
 
 //FindSequence(kNumericKeypad, '2', '9');
 
-/*let rr = new Map();
 let cache = new Map();
+
+/*let rr = new Map();
 ComputeAllCodePaths(kDirectionalKeypad, ['v', 'v', 'v', 'A'], 1, [], rr, cache);
 
 console.log(rr);
 
-rr.clear();
+rr.clear();*/
 
-rr.set(">^^A", 1);
-rr.set("^>^A", 1);
-rr.set("^^>A", 1);
+/*let rr = [['>','^', '^', 'A']];
 
-for (let [key, value] of rr)
+for (let i = 0; i < 25; i++) {
+
+  console.log(i);
+
+  let bb = [];
+for (let j = 0; j < rr.length; j++)
 {
-  let bb = new Map();
-  ComputeAllCodePaths(kDirectionalKeypad, ToArray(key), 1, [], bb, cache);
-
   console.log("---------------------------------------------");
-  console.log(bb);
+  ComputeAllCodePaths(kDirectionalKeypad, rr[j], 1, [], bb, cache);
+  //console.log(bb);
+}
+
+rr = bb;
 }*/
 
-console.log(ComputeTotalComplexity(codes, 1));
+console.log(ComputeTotalComplexity(codes, 25));
