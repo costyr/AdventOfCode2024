@@ -37,7 +37,7 @@ function ComputePathLength(aHashMap, aPath) {
 function ComputeBestPath(aHashMap, aCodePaths, aStrict) {
 
   let min = Number.MAX_SAFE_INTEGER;
-  let tt = [];
+  let tt = new Array();
   for (let i = 0; i < aCodePaths.length; i++)
   {
     let dist = ComputePathLength(aHashMap, aCodePaths[i]);
@@ -176,18 +176,21 @@ function FindSequence(aMap, aStart, aEnd) {
 }
 
 function ComputeAllCodePaths(aMap, aCode, aIndex, aPath, aAllPaths, aCache) {
-  let gg = ['A', ...aCode];
+  let gg = 'A';
+  gg += aCode.toString().replace(/,/g, "");
 
   if (aIndex >= gg.length) {
     aAllPaths.push(aPath);
     return;
   }
 
+  let ll = [];
+
   for (let i = aIndex; i < gg.length; i++) {
 
     let key = gg[i - 1] + "_" +gg[i];
 
-    let yy = [];
+    let yy = new Array();
     if (aCache.has(key))
       yy = aCache.get(key)
     else {
@@ -198,24 +201,26 @@ function ComputeAllCodePaths(aMap, aCode, aIndex, aPath, aAllPaths, aCache) {
 
     if (yy.length > 1) {
       for (let j = 0; j < yy.length; j++) {
-        let newPath = [...aPath];
-        newPath.push(...yy[j]);
-        newPath.push('A');
+        let newPath = util.CopyObject(aPath);
+        newPath += yy[j].toString().replace(/,/g, "");
+        newPath += 'A';
 
         ComputeAllCodePaths(aMap, aCode, i + 1, newPath, aAllPaths, aCache);
       }
       return;
     }
     else {
-      if (yy.length > 0 && yy[0].length > 0)
-        aPath.push(...yy[0]);
-      aPath.push('A');
 
-      if (aPath.length > 102944839)
-        console.log(aPath.length);
+      let rr = yy.length > 0 && yy[0].length > 0 ? yy[0].toString().replace(/,/g, "") : "";
+      rr += 'A';
+      
+      aPath += rr;
+
+      ll.push(rr.length);
     }
   }
 
+  //console.log(ll);
   aAllPaths.push(aPath);
 }
 
@@ -264,7 +269,7 @@ function ComputeTotalComplexity(aCodes, aCount) {
   cache.set(">_v", [['<']]);
   cache.set(">_<", [['<', '<']]);
   cache.set(">_>", [[]]);
-  cache.set(">_A", [['^', 'A']]);
+  cache.set(">_A", [['^']]);
 
   cache.set("A_^", [['<']]);
   cache.set("A_v", [['<', 'v']]);
@@ -273,24 +278,23 @@ function ComputeTotalComplexity(aCodes, aCount) {
   cache.set("A_A", [[]]);
 
   for (let i = 0; i < aCodes.length; i++) {
-    let gg = [];
+    let gg = new Array();
     ComputeAllCodePaths(kNumericKeypad, aCodes[i], 1, [], gg, cache);
 
     let gg0 = ComputeBestPath(kDirectionalKeypadMap, gg, false);
 
     for (let k = 0; k < aCount; k++) {
-      //console.log(k + " " + gg.length);
+      console.log(k + " " + gg0[0].length);
     let uu = [];
-    for (let i = 0; i < gg0.length; i++)
-      ComputeAllCodePaths(kDirectionalKeypad, gg0[i], 1, [], uu, cache);
-    gg0 = ComputeBestPath(kDirectionalKeypadMap, uu, true);
-
-    console.log(gg0[0].length);
+    for (let i = 0; i < gg0.length; i++) {
+      ComputeAllCodePaths(kDirectionalKeypad, gg0[i], 1, "", uu, cache);
+    }
+    gg0 = uu;
   }
 
     let kk = [];
     for (let i = 0; i < gg0.length; i++)
-      ComputeAllCodePaths(kDirectionalKeypad, gg0[i], 1, [], kk, cache);
+      ComputeAllCodePaths(kDirectionalKeypad, gg0[i], 1, "", kk, cache);
 
     let min = Number.MAX_SAFE_INTEGER;
     for (let i = 0; i < kk.length; i++)
@@ -307,7 +311,7 @@ function ComputeTotalComplexity(aCodes, aCount) {
   return total;
 }
 
-let codes = util.MapInput("./Day21Input.txt", (aElem) => {
+let codes = util.MapInput("./Day21TestInput.txt", (aElem) => {
   return aElem.split("");
 }, "\r\n");
 
@@ -342,3 +346,8 @@ rr = bb;
 }*/
 
 console.log(ComputeTotalComplexity(codes, 25));
+
+/*let gg = new Array();
+for (let i = 0; i < 1200000000; i++)
+  gg.push('A');*/
+
