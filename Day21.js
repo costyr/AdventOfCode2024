@@ -243,47 +243,25 @@ function ToArray(aDirs)
   return aDirs.split("");
 }
 
-function ComputeTotalComplexity(aCodes, aCount) {
+function ComputeTotalComplexity(aCodes, aCount, aPathMap) {
   let total = 0;
   let cache = new Map();
 
-  cache.set("^_^", [[]]);
-  cache.set("^_v", [['v']]);
-  cache.set("^_<", [['v', '<']]);
-  cache.set("^_>", [['v', '>']]);
-  cache.set("^_A", [['>']]);
-
-  cache.set("v_^", [['^']]);
-  cache.set("v_v", [[]]);
-  cache.set("v_<", [['<']]);
-  cache.set("v_>", [['>']]);
-  cache.set("v_A", [['^', '>']]);
-
-  cache.set("<_^", [['>', '^']]);
-  cache.set("<_v", [['>']]);
-  cache.set("<_<", [[]]);
-  cache.set("<_>", [['>', '>']]);
-  cache.set("<_A", [['>', '>', '^']]);
-
-  cache.set(">_^", [['<', '^']]);
-  cache.set(">_v", [['<']]);
-  cache.set(">_<", [['<', '<']]);
-  cache.set(">_>", [[]]);
-  cache.set(">_A", [['^']]);
-
-  cache.set("A_^", [['<']]);
-  cache.set("A_v", [['<', 'v']]);
-  cache.set("A_<", [['v', '<', '<']]);
-  cache.set("A_>", [['v']]);
-  cache.set("A_A", [[]]);
-
+  let cache2 = new Map();
   for (let i = 0; i < aCodes.length; i++) {
     let gg = new Array();
     ComputeAllCodePaths(kNumericKeypad, aCodes[i], 1, [], gg, cache);
 
     let gg0 = ComputeBestPath(kDirectionalKeypadMap, gg, false);
 
-    for (let k = 0; k < aCount; k++) {
+    let min = Number.MAX_SAFE_INTEGER;
+    for (let j = 0; j < gg0.length; j++) 
+    {
+      let l1 = ComputeTotalComplexity2(gg0[j], aCount, aPathMap, 'A', cache2);
+      min = Math.min(min, l1);
+    }
+
+    /*for (let k = 0; k < aCount; k++) {
       console.log(k + " " + gg0[0].length);
     let uu = [];
     for (let i = 0; i < gg0.length; i++) {
@@ -298,7 +276,7 @@ function ComputeTotalComplexity(aCodes, aCount) {
 
     let min = Number.MAX_SAFE_INTEGER;
     for (let i = 0; i < kk.length; i++)
-      min = Math.min(kk[i].length, min);
+      min = Math.min(kk[i].length, min);*/
 
     let numCode = parseInt(aCodes[i].toString().replace(/,/g, "").substr(0, 3));
 
@@ -311,7 +289,36 @@ function ComputeTotalComplexity(aCodes, aCount) {
   return total;
 }
 
-let codes = util.MapInput("./Day21TestInput.txt", (aElem) => {
+function ComputeTotalComplexity2(aSequence, aCount, aPathMap, aPrev, aCache) 
+{
+  let key = aSequence + "_" + aCount;
+
+  if (aCache.has(key))
+    return aCache.get(key);
+
+  if (aCount == 0) 
+    return aSequence.length;
+
+  let nextPrev = 'A';
+
+  let length = 0;
+  for (let i = 0; i < aSequence.length; i++)
+  {
+    let key = aPrev + "_" + aSequence[i];
+    let newSequence = aPathMap.get(key);
+
+    aPrev = aSequence[i];
+
+    length += ComputeTotalComplexity2(newSequence, aCount - 1, aPathMap, nextPrev, aCache);
+
+    nextPrev = newSequence[newSequence.length - 1];
+  }
+
+  aCache.set(key, length);
+  return length;
+}
+
+let codes = util.MapInput("./Day21Input.txt", (aElem) => {
   return aElem.split("");
 }, "\r\n");
 
@@ -319,7 +326,37 @@ console.log(codes);
 
 //FindSequence(kNumericKeypad, '2', '9');
 
-let cache = new Map();
+let pathMap = new Map();
+
+pathMap.set("^_^", "A");
+pathMap.set("^_v", "vA");
+pathMap.set("^_<", "v<A");
+pathMap.set("^_>", "v>A");
+pathMap.set("^_A", ">A");
+
+pathMap.set("v_^", "^A");
+pathMap.set("v_v", "A");
+pathMap.set("v_<", "<A");
+pathMap.set("v_>", ">A");
+pathMap.set("v_A", "^>A");
+
+pathMap.set("<_^", ">^A");
+pathMap.set("<_v", ">A");
+pathMap.set("<_<", "A");
+pathMap.set("<_>", ">>A");
+pathMap.set("<_A", ">>^A");
+
+pathMap.set(">_^", "<^A");
+pathMap.set(">_v", "<A");
+pathMap.set(">_<", "<<A");
+pathMap.set(">_>", "A");
+pathMap.set(">_A", "^A");
+
+pathMap.set("A_^", "<A");
+pathMap.set("A_v", "<vA");
+pathMap.set("A_<", "v<<A");
+pathMap.set("A_>", "vA");
+pathMap.set("A_A", "A");
 
 /*let rr = new Map();
 ComputeAllCodePaths(kDirectionalKeypad, ['v', 'v', 'v', 'A'], 1, [], rr, cache);
@@ -345,9 +382,14 @@ for (let j = 0; j < rr.length; j++)
 rr = bb;
 }*/
 
-console.log(ComputeTotalComplexity(codes, 25));
+console.log(ComputeTotalComplexity(codes, 2, pathMap));
 
-/*let gg = new Array();
-for (let i = 0; i < 1200000000; i++)
-  gg.push('A');*/
+console.log(ComputeTotalComplexity(codes, 25, pathMap));
 
+/*let p = {p: "" };
+
+let cache = new Map();
+
+console.log(ComputeTotalComplexity2("<A^A^^>AvvvA", 25, pathMap, p, 'A', cache));
+
+console.log(p.p);*/
