@@ -257,7 +257,7 @@ function ComputeTotalComplexity(aCodes, aCount, aPathMap) {
     let min = Number.MAX_SAFE_INTEGER;
     for (let j = 0; j < gg0.length; j++) 
     {
-      let l1 = ComputeTotalComplexity2(gg0[j], aCount, aPathMap, 'A', cache2);
+      let l1 = ComputeTotalComplexity2(gg0[j], aCount, aPathMap, cache2);
       min = Math.min(min, l1);
     }
 
@@ -289,7 +289,7 @@ function ComputeTotalComplexity(aCodes, aCount, aPathMap) {
   return total;
 }
 
-function ComputeTotalComplexity2(aSequence, aCount, aPathMap, aPrev, aCache) 
+function ComputeTotalComplexity2(aSequence, aCount, aPathMap, aCache) 
 {
   let key = aSequence + "_" + aCount;
 
@@ -299,19 +299,17 @@ function ComputeTotalComplexity2(aSequence, aCount, aPathMap, aPrev, aCache)
   if (aCount == 0) 
     return aSequence.length;
 
-  let nextPrev = 'A';
+  let prev = 'A';
 
   let length = 0;
   for (let i = 0; i < aSequence.length; i++)
   {
-    let key = aPrev + "_" + aSequence[i];
+    let key = prev + "_" + aSequence[i];
     let newSequence = aPathMap.get(key);
 
-    aPrev = aSequence[i];
+    prev = aSequence[i];
 
-    length += ComputeTotalComplexity2(newSequence, aCount - 1, aPathMap, nextPrev, aCache);
-
-    nextPrev = newSequence[newSequence.length - 1];
+    length += ComputeTotalComplexity2(newSequence, aCount - 1, aPathMap, aCache);
   }
 
   aCache.set(key, length);
