@@ -63,7 +63,7 @@ function ExecInst(aOpcode, aOperand, aRegs, aOutput, aListing)
   else if (aOpcode == 4)
   {
     AddToListing(aListing, "B = " + aRegs.B + " XOR " + aRegs.C);
-    aRegs.B = aRegs.B ^ aRegs.C;
+    aRegs.B = Number(BigInt(aRegs.B) ^ BigInt(aRegs.C));
   }
   else if (aOpcode == 5)
   {
@@ -105,9 +105,9 @@ function IsEqual(aA, aB)
   return true;
 }
 
-function RunProgram(aProgram, aA)
+function RunProgram(aProgram, aRegA)
 {
-  let regs = {A: aA, B: 0, C: 0};
+  let regs = {A: aRegA, B: 0, C: 0};
 
   let i = 0;
   let output = [];
@@ -127,30 +127,6 @@ function RunProgram(aProgram, aA)
   //console.log(listing.o);
 
   return output;
-}
-
-function FindRegValue(aProgram) 
-{
-  let i = 1;//17592186044416;
-  while (1) 
-  {
-    let regs = { A: i, B: 0, C: 0 };
-    let oo = RunProgram(aProgram, i);
-
-    console.log(i + "=>" + oo);
-
-    if (IsEqual(aProgram, oo))
-      break;
-
-    /*let x = i % 8;
-    x = x ^ 5;
-    i = i * Math.pow(2, x);*/
-    //if ( oo.length == aProgram.length)
-    //  i++
-    //else
-      i += 6 * 8 ** 3;  
-  }
-  return i;
 }
 
 function RunCompiledProgram(aRegA) {
@@ -191,6 +167,110 @@ function Simulate(aProgram)
   }
 }
 
+function ComputeAll(aProgram, aIndex, aMults, aTotal) 
+{
+  if (aIndex == aMults.length)
+  {
+    a = aMults.reduce((pv, cv, i) => { return pv + cv * 8 ** i;}, 0);
+
+    let output = RunProgram(aProgram, a);
+
+    //console.log(output);
+    //console.log(aMults);
+
+    if (IsEqual(output, aProgram)) {
+       console.log("RegA:" + a);
+    }
+    else
+    {
+      let ll = Math.min(output.length, aProgram.length);
+      let part = [];
+      let k = aProgram.length - 1;
+      for (let i = ll - 1; i >= 0; i--) {
+        if (output[i] == aProgram[k])
+          part.unshift(output[i]);
+        else
+          break;
+        k--;
+      }
+
+      if (part.length > aTotal.max.length)
+      {
+        aTotal.max = part;
+        aTotal.mults = aMults.slice(-1 * Math.min(part.length - 2, 1));
+        aTotal.newMax = true;
+        console.log(part);
+        console.log(aTotal.mults);
+      }
+    }
+
+    return;
+  }
+
+  if (aTotal.newMax)
+    return;
+
+  if (aMults[aIndex] == -1) {
+    for (let i = 0; i < 8; i++)
+    {
+      let newMults = [...aMults];
+      newMults[aIndex] = i;
+      ComputeAll(aProgram, aIndex + 1, newMults, aTotal);
+    }
+  }
+  else
+  {
+    let newMults = [...aMults];
+    ComputeAll(aProgram, aProgram.length, newMults, aTotal);
+  }
+}
+
+function ComputeAll2(aProgram, aMults) {
+
+  let s = 1;
+  let a = 0;
+  for (;;)
+  {
+    let output = RunProgram(aProgram, a);
+
+    if (IsEqual(output, aProgram))
+    {
+      return a;
+    }
+    else if (IsEqual(output, aProgram.slice(-1 * s)))
+    {
+      aMults.push(a);
+      a *= 8;
+      s++;
+    }
+    else 
+      a++;
+  }
+}
+
+function FindRegValue(aProgram) 
+{
+  let total = { max: [], mults: [], newMax: false };
+
+  while (1) 
+  {
+    const mults = Array(aProgram.length).fill(-1);
+
+    if (total.max.length > 0)
+      {
+        let k = mults.length - 1;
+        for (let j = total.mults.length - 1; j >= 0; j--)
+        {
+          mults[k] = total.mults[j];
+          k--;
+        }
+      }
+
+    total.newMax = false;
+   ComputeAll(aProgram, 0, mults, total);
+  }
+}
+
 let regs = {A: 0, B: 0, C: 0 };
 let program = [];
 
@@ -211,32 +291,25 @@ util.MapInput("./Day17Input.txt", (aElem, aIndex) => {
   }
  }, "\r\n\r\n");
 
- console.log(regs);
- console.log(program);
+ //console.log(regs);
+ //console.log(program);
 
- regs.A = 0 + 0 * 8 ** 0 + 1 * 8 ** 1 + 2 * 8 ** 2;
+ console.log(RunProgram(program, regs.A).toString());
 
- //console.log(RunProgram(program, regs));
+//console.log(RunProgram(program, 117440));
 
- //Simulate(program);
+//const mults2 =[ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 3, 3, 0, 3 ];
 
- console.log(FindRegValue(program));
+//const mults2 = [-1, -1, -1, 4, 2, 4, 4, 3, 3, 6, 4, 0, 3, 3, 0, 3];
 
- //for (let i = 0; i < 8; i++)
- //  console.log(RunCompiledProgram(3 * 8 + i));
+//let total = { max: [] };
 
- /*let a = 0, output = RunProgram(program, a);
-        const mults = Array(program.length).fill(0);
-        let quine = output;
-        for (let i = program.length - 1; i >= 0; i--) { // Work right to left
-            while (output.length < program.length || quine[i] !== program[i]) {
-                mults[i]++; // change element N by multiplying by 8 ** N
-                a = mults.reduce((pv, cv, i) => pv + cv * 8 ** i);
-                output = RunProgram(program, a);
-                quine = output;
-            }
-        }
+//let cache = new Map();
 
-console.log(a);
+//ComputeAll(program, 0, mults2, total, cache);
 
-console.log(RunProgram(program, a));*/
+//FindRegValue(program);
+
+const mults2 = Array(program.length).fill(-1);
+
+console.log(ComputeAll2(program, mults2));
